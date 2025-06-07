@@ -40,7 +40,6 @@ class Question(models.Model):
     QUESTION_TYPES = (
         ('single', 'Один правильный ответ'),
         ('multiple', 'Несколько правильных ответов'),
-        ('text', 'Текстовый ответ'),
     )
     text = models.TextField(verbose_name='Текст вопроса')
     question_type = models.CharField(
@@ -191,7 +190,9 @@ class TestResult(models.Model):
     )
     score = models.FloatField(
         validators=[MinValueValidator(0), MaxValueValidator(100)],
-        verbose_name='Результат в %'
+        verbose_name='Результат в %',
+        default=0.0,
+        null=False
     )
     completed_at = models.DateTimeField(
         auto_now_add=True,
@@ -211,34 +212,55 @@ class TestResult(models.Model):
         return f"Результат {self.user.username} по тесту '{self.test.title}': {self.score}%"
 
     def calculate_score(self):
-        """
-        Метод для подсчета правильных ответов
-        """
-        total_questions = self.test.questions.count()
+        test_questions = self.test.test_questions.all().select_related('question')
+        total_questions = test_questions.count()
         if total_questions == 0:
-            self.score = 0
+            self.score = 0.0
+            self.is_completed = True
             self.save()
-            return 0
+            return []
 
-        correct_answers = 0
         user_answers = UserAnswer.objects.filter(
             user=self.user,
             test=self.test
         ).select_related('question')
-        for user_answer in user_answers:
-            question = user_answer.question
-            if question.question_type in ['single', 'multiple']:
-                if set(user_answer.answer) == set(question.correct_answers):
-                    correct_answers += 1
-                    user_answer.is_correct = True
-                else:
-                    user_answer.is_correct = False
-                user_answer.save()
-            # Для текстовых ответов учитываем только проверенные вручную
-            elif question.question_type == 'text' and user_answer.is_verified and user_answer.is_correct:
+
+        detailed_results = []
+        correct_answers = 0
+
+        for tq in test_questions:
+            question = tq.question
+            user_answer = user_answers.filter(question=question).first()
+
+            # Получаем ответы и нормализуем их к спискам
+            user_resp = user_answer.answer if user_answer else None
+            correct_resp = question.correct_answers
+
+            # Нормализация форматов
+            user_resp = [user_resp] if not isinstance(user_resp, list) and user_resp is not None else user_resp or []
+            correct_resp = [correct_resp] if not isinstance(correct_resp,
+                                                            list) and correct_resp is not None else correct_resp or []
+
+            # Приводим к строковому виду для сравнения
+            user_resp = [str(x).strip().lower() for x in user_resp]
+            correct_resp = [str(x).strip().lower() for x in correct_resp]
+
+            is_correct = set(user_resp) == set(correct_resp)
+
+            if is_correct:
                 correct_answers += 1
+
+            # Сохраняем в нормализованном формате (всегда списки)
+            detailed_results.append({
+                'question': question,
+                'user_answer': user_resp if user_answer else None,
+                'correct_answer': correct_resp,
+                'is_correct': is_correct,
+                'question_type': question.question_type
+            })
 
         self.score = round((correct_answers / total_questions) * 100, 2)
         self.is_completed = True
         self.save()
-        return self.score
+
+        return detailed_results

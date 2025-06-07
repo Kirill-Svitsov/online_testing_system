@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-4">
+    <h2>{{ test.title }}</h2>
+    {% if test.description %}<p>{{ test.description }}</p>{% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        {{ formset.management_form }}
+
+        {% for form in formset %}
+        <div class="card mb-4">
+            <div class="card-body">
+                <input type="hidden" name="{{ form.prefix }}-question_id" value="{{ form.question_id.value }}">
+                <input type="hidden" name="{{ form.prefix }}-question_text" value="{{ form.question_text.value }}">
+                <input type="hidden" name="{{ form.prefix }}-question_type" value="{{ form.question_type.value }}">
+                <input type="hidden" name="{{ form.prefix }}-choices" value="{{ form.choices.value }}">
+                <h5 class="card-title">Вопрос {{ forloop.counter }}</h5>
+                <p class="card-text">{{ form.question_text.value }}</p>
+                <div class="alert alert-info mb-3">
+                    {% if form.question_type.value == 'single' %}
+                        <i class="bi bi-check-circle"></i> Выберите <strong>один</strong> правильный ответ
+                    {% elif form.question_type.value == 'multiple' %}
+                        <i class="bi bi-check-all"></i> Выберите <strong>один или несколько</strong> правильных ответов
+                    {% endif %}
+                </div>
+
+                {% if form.question_type.value == 'single' %}
+                    <div class="form-group">
+                        {% for choice in form.answer.field.choices %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio"
+                                   name="{{ form.prefix }}-answer"
+                                   id="{{ form.prefix }}-answer-{{ forloop.counter }}"
+                                   value="{{ choice.0 }}" required>
+                            <label class="form-check-label" for="{{ form.prefix }}-answer-{{ forloop.counter }}">
+                                {{ choice.1 }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                {% elif form.question_type.value == 'multiple' %}
+                    <div class="form-group">
+                        {% for choice in form.answer.field.choices %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox"
+                                   name="{{ form.prefix }}-answer"
+                                   id="{{ form.prefix }}-answer-{{ forloop.counter }}"
+                                   value="{{ choice.0 }}">
+                            <label class="form-check-label" for="{{ form.prefix }}-answer-{{ forloop.counter }}">
+                                {{ choice.1 }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                {% else %}
+                    <div class="form-group">
+                        <textarea class="form-control"
+                                  name="{{ form.prefix }}-answer"
+                                  rows="3"></textarea>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <button type="submit" class="btn btn-primary">Отправить ответы</button>
+    </form>
+</div>
+{% endblock %}

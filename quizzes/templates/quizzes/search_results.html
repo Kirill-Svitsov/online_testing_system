@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-4">
+    <h2>Результаты поиска</h2>
+    
+    {% if query %}
+        <p>По запросу "{{ query }}" найдено: {{ results_count }} тестов</p>
+    {% endif %}
+    
+    <div class="row">
+        {% for test in tests %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ test.title }}</h5>
+                    {% if test.description %}
+                        <p class="card-text">{{ test.description|truncatechars:100 }}</p>
+                    {% endif %}
+                    <a href="{% url 'quizzes:detail' test.id %}" class="btn btn-primary">
+                        Пройти тест
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                Ничего не найдено. Попробуйте изменить запрос.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

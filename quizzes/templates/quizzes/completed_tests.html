@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-4">
+    <h2>Пройденные тесты</h2>
+    
+    {% if not completed_tests %}
+    <div class="alert alert-info">
+        Вы еще не прошли ни одного теста.
+    </div>
+    {% else %}
+    <div class="list-group">
+        {% for result in completed_tests %}
+        <a href="{% url 'quizzes:test_result' result.test.id %}" 
+           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-1">{{ result.test.title }}</h5>
+                <small class="text-muted">Пройден {{ result.completed_at|date:"d.m.Y H:i" }}</small>
+            </div>
+            <span class="badge {% if result.score >= 80 %}bg-success{% elif result.score >= 50 %}bg-warning{% else %}bg-danger{% endif %} rounded-pill">
+                {{ result.score }}%
+            </span>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="mt-3">
+        <a href="{% url 'quizzes:home' %}" class="btn btn-outline-primary">
+            Все доступные тесты
+        </a>
+    </div>
+</div>
+{% endblock %}

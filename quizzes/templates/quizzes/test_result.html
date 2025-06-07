@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container my-4">
+    <h2>Результаты теста: {{ test.title }}</h2>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h3>Ваш результат: {{ result.score|floatformat:2 }}%</h3>
+            <p>Всего вопросов: {{ detailed_results|length }}</p>
+            <p>Правильных ответов: {{ correct_count }}</p>
+            <p>Неправильных ответов: {{ incorrect_count }}</p>
+            <p>Дата прохождения: {{ result.completed_at|date:"d.m.Y H:i" }}</p>
+        </div>
+    </div>
+
+    <h3>Детализация ответов:</h3>
+
+    {% for detail in detailed_results %}
+    <div class="card mb-3 {% if detail.is_correct %}border-success{% else %}border-danger{% endif %}">
+        <div class="card-body">
+            <h5 class="card-title">Вопрос {{ forloop.counter }}: {{ detail.question.text }}</h5>
+
+            <div class="mb-2">
+                <strong>Ваш ответ:</strong>
+                <span class="{% if detail.is_correct %}text-success{% else %}text-danger{% endif %}">
+                    {% if detail.user_answer %}
+                        {{ detail.user_answer|join:", " }}
+                    {% else %}
+                        Нет ответа
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="mb-2">
+                <strong>Правильный ответ:</strong>
+                {{ detail.correct_answer|join:", " }}
+            </div>
+
+            <div class="mb-2">
+                <strong>Тип вопроса:</strong>
+                {{ detail.question.get_question_type_display }}
+            </div>
+
+            <div>
+                {% if detail.is_correct %}
+                <span class="badge bg-success">✓ Верно</span>
+                {% else %}
+                <span class="badge bg-danger">✗ Неверно</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-warning">Нет данных о детализации ответов</div>
+    {% endfor %}
+</div>
+{% endblock %}
