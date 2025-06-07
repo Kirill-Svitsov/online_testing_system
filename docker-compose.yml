@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  quizzes_db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5430:5432"
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  quizzes_redis:
+    image: redis:6
+    ports:
+      - "6370:6379"
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  quizzes_web:
+    build: .
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_HOST=${POSTGRES_HOST:-quizzes_db}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - REDIS_URL=${REDIS_URL:-redis://quizzes_redis:6379/0}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-'django-insecure-4hkos7#7@#(am!a_+k&ts@x!(0$o+-!t2vavbb$o2g5eu4imv='}
+    command: python3 manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8060:8000"
+    depends_on:
+      - quizzes_db
+      - quizzes_redis
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
