@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'quizzes.apps.QuizzesConfig',
+    'api.apps.ApiConfig',
     'drf_yasg',
 ]
 

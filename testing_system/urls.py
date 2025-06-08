@@ -7,7 +7,7 @@ schema_view = get_schema_view(
     openapi.Info(
         title="Quizzes API",
         default_version='v1',
-        description="Online testing system",
+        description="API для тестирования пользователей",
     ),
     public=True,
 )
@@ -15,6 +15,7 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('quizzes.urls', namespace='quizzes')),
-    # Апи добавим позже.
-    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0)),
+    path('api/', include('api.urls')),
+    path('api/auth/', include('rest_framework.urls')),
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
 ]
