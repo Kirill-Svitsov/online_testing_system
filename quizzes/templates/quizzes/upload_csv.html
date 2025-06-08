@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Загрузка тестов из CSV</h2>
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="form-group">
+        <label for="csv_file">Выберите CSV файл:</label>
+        <input type="file" name="csv_file" accept=".csv" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Загрузить</button>
+</form>
+
+<h3 class="mt-4">Формат CSV файла:</h3>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>test_title</th>
+            <th>test_description</th>
+            <th>question_text</th>
+            <th>question_type</th>
+            <th>choices</th>
+            <th>correct_answers</th>
+            <th>question_order</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Название теста</td>
+            <td>Описание (опционально)</td>
+            <td>Текст вопроса</td>
+            <td>single или multiple</td>
+            <td>Варианты через |</td>
+            <td>Правильные ответы через |</td>
+            <td>Порядковый номер</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="mt-4">
+    <h4>Пример данных для CSV:</h4>
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Пример теста по Python</span>
+            <button onclick="copyExample()" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-clipboard"></i> Копировать
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <pre id="csv-example" class="m-0 p-3 bg-light"><code>test_title;test_description;question_text;question_type;choices;correct_answers;question_order
+Основы Python;Тест по базовому синтаксису;Как объявить кортеж?;single;"()|[]|{}|tuple()";"()|tuple()";1
+Основы Python;Тест по базовому синтаксису;Какие типы изменяемы?;multiple;"list|tuple|dict|set";"list|dict|set";2
+ООП в Python;Тест по объектно-ориентированному программированию;Что такое self?;single;"Указатель|Ссылка на экземпляр|Метод|Атрибут";"Ссылка на экземпляр";1
+ООП в Python;Тест по объектно-ориентированному программированию;Как объявить класс?;single;"class MyClass:|def MyClass():|struct MyClass:|object MyClass:";"class MyClass:";2</code></pre>
+        </div>
+    </div>
+</div>
+
+{% if messages %}
+<div class="mt-3">
+    {% for message in messages %}
+    <div class="alert alert-{% if message.tags %}{{ message.tags }}{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<script>
+function copyExample() {
+    const exampleText = document.getElementById('csv-example').textContent;
+    navigator.clipboard.writeText(exampleText).then(() => {
+        const btn = event.target.closest('button');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check"></i> Скопировано!';
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+        }, 2000);
+    }).catch(err => {
+        console.error('Ошибка копирования: ', err);
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,5 @@
+test_title;test_description;question_text;question_type;choices;correct_answers;question_order
+Основы Python;Тест по базовому синтаксису;Как объявить кортеж?;single;"()|[]|{}|tuple()";"()|tuple()";1
+Основы Python;Тест по базовому синтаксису;Какие типы изменяемы?;multiple;"list|tuple|dict|set";"list|dict|set";2
+ООП в Python;Тест по объектно-ориентированному программированию;Что такое self?;single;"Указатель|Ссылка на экземпляр|Метод|Атрибут";"Ссылка на экземпляр";1
+ООП в Python;Тест по объектно-ориентированному программированию;Как объявить класс?;single;"class MyClass:|def MyClass():|struct MyClass:|object MyClass:";"class MyClass:";2

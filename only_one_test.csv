@@ -1,0 +1,4 @@
+test_title;test_description;question_text;question_type;choices;correct_answers;question_order
+Основы Python;Тест по основам;Как объявить список?;single;"list()|[]|array()|{}";"[]";1
+Основы Python;Тест по основам;Какой тип у tuple?;single;"изменяемый|неизменяемый|список|словарь";"неизменяемый";2
+ООП;Тест по ООП;Что такое self?;single;"указатель|ссылка на экземпляр|метод|атрибут";"ссылка на экземпляр";1

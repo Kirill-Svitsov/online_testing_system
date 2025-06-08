@@ -32,6 +32,11 @@ class Test(models.Model):
     def __str__(self):
         return self.title
 
+    def delete(self, *args, **kwargs):
+        # Удаляем все связи с вопросами перед удалением теста
+        self.test_questions.all().delete()
+        super().delete(*args, **kwargs)
+
 
 class Question(models.Model):
     """
@@ -101,11 +106,6 @@ class TestQuestion(models.Model):
             order=self.order
         ).exclude(pk=self.pk if self.pk else None)
         if conflicting_questions.exists():
-            # Находим максимальный порядковый номер в этом тесте
-            max_order = TestQuestion.objects.filter(
-                test=self.test
-            ).aggregate(models.Max('order'))['order__max'] or 0
-
             # Смещаем все вопросы, начиная с текущего порядка
             questions_to_update = TestQuestion.objects.filter(
                 test=self.test,
@@ -171,7 +171,7 @@ class UserAnswer(models.Model):
         unique_together = ['user', 'test', 'question']
 
     def __str__(self):
-        return f"Ответ {self.user.username} на вопрос #{self.question.order} в тесте '{self.test.title}'"
+        return f"Ответ {self.user.username} на вопрос #{self.question.text[:20]} в тесте '{self.test.title}'"
 
 
 class TestResult(models.Model):

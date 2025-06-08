@@ -3,18 +3,22 @@
         <nav class="navbar navbar-expand-lg navbar-light">
             <div class="container-fluid">
                 <a class="navbar-brand fw-bold" href="{% url 'quizzes:home' %}">TestSystem</a>
+
                 <ul class="navbar-nav mx-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'quizzes:home' %}">Все тесты</a>
                     </li>
+                    {% if user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'quizzes:completed_tests' %}">Пройденные тесты</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">Загрузить из CSV</a>
+                        <a class="nav-link" href="{% url 'quizzes:upload_csv' %}">Загрузить из CSV</a>
                     </li>
+                    {% endif %}
                 </ul>
 
+                {% if user.is_authenticated %}
                 <form class="d-flex ms-3" style="max-width: 500px;" method="GET" action="{% url 'quizzes:search' %}">
                     <input class="form-control search-box"
                            type="search"
@@ -24,6 +28,7 @@
                            value="{{ request.GET.q }}">
                     <button class="btn btn-outline-primary ms-2" type="submit">Найти</button>
                 </form>
+                {% endif %}
 
                 <div class="dropdown ms-3">
                     <button class="btn btn-light dropdown-toggle" type="button" id="userMenu" data-bs-toggle="dropdown">
@@ -35,10 +40,10 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         {% if user.is_authenticated %}
-                        <li><a class="dropdown-item" href="#">Выйти</a></li>
+                        <li><a class="dropdown-item" href="{% url 'quizzes:logout' %}">Выйти</a></li>
                         {% else %}
-                        <li><a class="dropdown-item" href="#">Войти</a></li>
-                        <li><a class="dropdown-item" href="#">Регистрация</a></li>
+                        <li><a class="dropdown-item" href="{% url 'quizzes:login' %}">Войти</a></li>
+                        <li><a class="dropdown-item" href="{% url 'quizzes:register' %}">Регистрация</a></li>
                         {% endif %}
                     </ul>
                 </div>
