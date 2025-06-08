@@ -14,14 +14,37 @@ User = get_user_model()
 
 
 class TestListView(generics.ListAPIView):
+    """
+    Список всех доступных тестов
+    """
     serializer_class = TestSerializer
     permission_classes = [IsAuthenticated]
     queryset = Test.objects.all()
 
+    @swagger_auto_schema(
+        operation_description="Получить список всех тестов",
+        responses={200: TestSerializer(many=True)}
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
 
 class TestDetailView(generics.RetrieveAPIView):
+    """
+    Детальная информация о тесте
+    """
     serializer_class = TestSerializer
     permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Получить детальную информацию о тесте",
+        responses={
+            200: TestSerializer(),
+            404: "Тест не найден"
+        }
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
     def get_object(self):
         test_id = self.kwargs.get('test_id')
@@ -29,26 +52,67 @@ class TestDetailView(generics.RetrieveAPIView):
 
 
 class QuestionListView(generics.ListAPIView):
+    """
+    Список всех вопросов
+    """
     serializer_class = QuestionSerializer
     permission_classes = [IsAuthenticated]
     queryset = Question.objects.all()
 
+    @swagger_auto_schema(
+        operation_description="Получить список всех вопросов",
+        responses={200: QuestionSerializer(many=True)}
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
 
 class QuestionDetailView(generics.RetrieveAPIView):
     """
-    Вью возвращающая ответы на конкретный вопрос.
-    Суперпользователь может передать параметр user_id,
-    и получить ответ другого пользователя
+    Детальная информация о вопросе
     """
     serializer_class = QuestionDetailSerializer
     permission_classes = [IsAuthenticated]
     queryset = Question.objects.all()
     lookup_field = 'id'
 
+    @swagger_auto_schema(
+        operation_description="Получить детальную информацию о вопросе",
+        responses={
+            200: QuestionDetailSerializer(),
+            404: "Вопрос не найден"
+        }
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
 
 class QuestionUserAnswersView(generics.RetrieveAPIView):
+    """
+    Получение ответов пользователя на вопрос
+    """
     serializer_class = QuestionWithUserAnswersSerializer
     permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Получить ответы пользователя на конкретный вопрос",
+        manual_parameters=[
+            openapi.Parameter(
+                'user_id',
+                openapi.IN_QUERY,
+                description="ID пользователя (только для админов)",
+                type=openapi.TYPE_INTEGER,
+                required=False
+            ),
+        ],
+        responses={
+            200: QuestionWithUserAnswersSerializer(),
+            403: "Доступ запрещен",
+            404: "Вопрос не найден"
+        }
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
     def get_object(self):
         question_id = self.kwargs['question_id']
@@ -59,16 +123,13 @@ class QuestionUserAnswersView(generics.RetrieveAPIView):
         target_user_id = self.request.query_params.get('user_id')
         question = self.get_object()
 
-        # Базовый queryset - все ответы на этот вопрос
         queryset = UserAnswer.objects.filter(
             question=question
         ).select_related('user', 'test').order_by('-created_at')
 
-        # Если user_id не указан - возвращаем только свои ответы
         if not target_user_id:
             return queryset.filter(user=request_user)
 
-        # Проверяем права (админ или запрашивает свои данные)
         target_user = get_object_or_404(User, id=target_user_id)
         if not (request_user.is_staff or request_user == target_user):
             raise PermissionDenied("У вас нет прав для просмотра результатов этого пользователя")
@@ -78,13 +139,21 @@ class QuestionUserAnswersView(generics.RetrieveAPIView):
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['request'] = self.request
-        # Если указан user_id - добавляем целевого пользователя в контекст
         target_user_id = self.request.query_params.get('user_id')
         if target_user_id:
             context['target_user'] = get_object_or_404(User, id=target_user_id)
         return context
 
+
+class UserTestsView(generics.ListAPIView):
+    """
+    Список тестов пользователя
+    """
+    serializer_class = TestWithUserAnswersSerializer
+    permission_classes = [IsAuthenticated]
+
     @swagger_auto_schema(
+        operation_description="Получить список тестов пользователя",
         manual_parameters=[
             openapi.Parameter(
                 'user_id',
@@ -93,34 +162,19 @@ class QuestionUserAnswersView(generics.RetrieveAPIView):
                 type=openapi.TYPE_INTEGER,
                 required=False
             ),
-        ]
+        ],
+        responses={200: TestWithUserAnswersSerializer(many=True)}
     )
     def get(self, request, *args, **kwargs):
-        question = self.get_object()
-        answers = self.get_queryset()
-
-        data = {
-            'question': question,
-            'answers': answers
-        }
-
-        serializer = self.get_serializer(data)
-        return Response(serializer.data)
-
-
-class UserTestsView(generics.ListAPIView):
-    serializer_class = TestWithUserAnswersSerializer
-    permission_classes = [IsAuthenticated]
+        return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
         request_user = self.request.user
         target_user_id = self.request.query_params.get('user_id')
 
-        # Если user_id не указан — возвращаем свои тесты
         if not target_user_id:
             return Test.objects.filter(test_questions__question__useranswer__user=request_user).distinct()
 
-        # Проверяем права (админ или запрашивает свои данные)
         target_user = get_object_or_404(User, id=target_user_id)
         if not (request_user.is_staff or request_user == target_user):
             raise PermissionDenied("У вас нет прав для просмотра результатов этого пользователя")
@@ -130,13 +184,21 @@ class UserTestsView(generics.ListAPIView):
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['request'] = self.request
-        # Если указан user_id — добавляем целевого пользователя в контекст
         target_user_id = self.request.query_params.get('user_id')
         if target_user_id:
             context['target_user'] = get_object_or_404(User, id=target_user_id)
         return context
 
+
+class UserTestDetailView(generics.RetrieveAPIView):
+    """
+    Детальная информация о тесте пользователя
+    """
+    serializer_class = TestWithUserAnswersSerializer
+    permission_classes = [IsAuthenticated]
+
     @swagger_auto_schema(
+        operation_description="Получить детальную информацию о тесте пользователя",
         manual_parameters=[
             openapi.Parameter(
                 'user_id',
@@ -145,22 +207,21 @@ class UserTestsView(generics.ListAPIView):
                 type=openapi.TYPE_INTEGER,
                 required=False
             ),
-        ]
+        ],
+        responses={
+            200: TestWithUserAnswersSerializer(),
+            403: "Доступ запрещен",
+            404: "Тест не найден"
+        }
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
-
-
-class UserTestDetailView(generics.RetrieveAPIView):
-    serializer_class = TestWithUserAnswersSerializer
-    permission_classes = [IsAuthenticated]
 
     def get_object(self):
         test_id = self.kwargs.get('test_id')
         target_user_id = self.request.query_params.get('user_id', self.request.user.id)
         target_user = get_object_or_404(User, id=target_user_id)
 
-        # Проверка прав
         if not (self.request.user.is_staff or self.request.user == target_user):
             raise PermissionDenied("У вас нет прав для просмотра этого теста")
 
@@ -178,37 +239,14 @@ class UserTestDetailView(generics.RetrieveAPIView):
             context['target_user'] = get_object_or_404(User, id=target_user_id)
         return context
 
-    @swagger_auto_schema(
-        manual_parameters=[
-            openapi.Parameter(
-                'user_id',
-                openapi.IN_QUERY,
-                description="ID пользователя (только для админов)",
-                type=openapi.TYPE_INTEGER,
-                required=False
-            ),
-        ]
-    )
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
-
 
 class UserAnswerCreateView(generics.CreateAPIView):
+    """
+    Сохранение ответа пользователя
+    """
     serializer_class = UserAnswerCreateSerializer
     permission_classes = [IsAuthenticated]
     queryset = UserAnswer.objects.all()
-
-    def perform_create(self, serializer):
-        instance = serializer.save(user=self.request.user)
-        test = instance.test
-
-        # Обновляем результат теста
-        test_result, _ = TestResult.objects.get_or_create(
-            user=self.request.user,
-            test=test,
-            defaults={'score': 0, 'is_completed': False}
-        )
-        test_result.calculate_score()
 
     @swagger_auto_schema(
         operation_description="Сохранить ответ пользователя на вопрос",
@@ -222,35 +260,50 @@ class UserAnswerCreateView(generics.CreateAPIView):
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
 
+    def perform_create(self, serializer):
+        instance = serializer.save(user=self.request.user)
+        test = instance.test
+        test_result, _ = TestResult.objects.get_or_create(
+            user=self.request.user,
+            test=test,
+            defaults={'score': 0, 'is_completed': False}
+        )
+        test_result.calculate_score()
+
 
 class SubmitTestAnswersView(generics.CreateAPIView):
+    """
+    Отправка ответов на тест
+    """
     serializer_class = TestSubmissionSerializer
     permission_classes = [IsAuthenticated]
 
     @swagger_auto_schema(
         operation_description="Отправить ответы на тест и получить результаты",
-        request_body=TestSubmissionSerializer
+        request_body=TestSubmissionSerializer,
+        responses={
+            200: "Результаты теста",
+            400: "Неверные данные",
+            403: "Доступ запрещен",
+            404: "Тест не найден"
+        }
     )
-    def create(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         test_id = self.kwargs.get('test_id')
         user = request.user
         test = get_object_or_404(Test, id=test_id)
-
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # Сохраняем ответы пользователя
         for answer_data in serializer.validated_data['answers']:
             question_id = answer_data['question_id']
             answer = answer_data['answer']
             question = get_object_or_404(Question, id=question_id)
-
             if not TestQuestion.objects.filter(test=test, question=question).exists():
                 return Response(
                     {"error": f"Вопрос с ID {question_id} не принадлежит тесту с ID {test_id}"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-
             UserAnswer.objects.update_or_create(
                 user=user,
                 test=test,
@@ -258,21 +311,17 @@ class SubmitTestAnswersView(generics.CreateAPIView):
                 defaults={'answer': answer}
             )
 
-        # Обновляем или создаем результат теста
         test_result, created = TestResult.objects.get_or_create(
             user=user,
             test=test,
             defaults={'score': 0, 'is_completed': True}
         )
-
         if not created:
             test_result.is_completed = True
             test_result.save()
 
-        # Получаем и форматируем результаты
         raw_results = test_result.calculate_score()
         detailed_results = []
-
         for result in raw_results:
             question = result.get('question')
             detailed_results.append({
@@ -286,7 +335,6 @@ class SubmitTestAnswersView(generics.CreateAPIView):
                 "unknown"
             })
 
-        # Формируем финальный ответ
         response_data = {
             "test_id": test.id,
             "test_title": test.title,
@@ -295,5 +343,4 @@ class SubmitTestAnswersView(generics.CreateAPIView):
             "completed_at": test_result.completed_at.isoformat() if test_result.completed_at else None,
             "detailed_results": detailed_results
         }
-
         return Response(response_data, status=status.HTTP_200_OK)

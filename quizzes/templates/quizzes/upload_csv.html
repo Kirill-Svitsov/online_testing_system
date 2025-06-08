@@ -9,14 +9,27 @@
         <input type="file" name="csv_file" accept=".csv" required class="form-control-file">
     </div>
     <div class="form-check mb-3">
-        <input class="form-check-input" type="checkbox" name="update_existing" id="update_existing">
-        <label class="form-check-label" for="update_existing">
-            Обновить существующие тесты
-        </label>
-        <div class="form-text text-muted" style="font-size: 0.85rem; margin-top: 0.25rem;">
-            <p><strong>Важно:</strong> Для вопросов с одним ответом (single) укажите ТОЛЬКО ОДИН правильный вариант!</p>
-        </div>
+    <input class="form-check-input" type="checkbox" name="update_existing" id="update_existing">
+    <label class="form-check-label" for="update_existing">
+        Обновить существующие тесты
+    </label>
+    <div class="form-text text-muted" style="font-size: 0.85rem; margin-top: 0.25rem;">
+        <p>При включении этой опции:</p>
+        <ul class="mb-2" style="padding-left: 1.2rem;">
+            <li>Тесты с совпадающими названиями будут обновлены (включая описание)</li>
+            <li>Вопросы, отсутствующие в новом CSV, будут удалены из теста</li>
+            <li>Дубликаты вопросов будут автоматически объединены</li>
+            <li>Будут сохранены связи с существующими вопросами, если они полностью совпадают</li>
+        </ul>
+        <p>При отключении опции:</p>
+        <ul style="padding-left: 1.2rem;">
+            <li>Тесты с существующими названиями будут пропущены</li>
+            <li>Только новые тесты и вопросы будут добавлены</li>
+            <li>Никакие существующие данные не будут изменены</li>
+        </ul>
+        <p><strong>Важно:</strong> Для вопросов с одним ответом (single) укажите ТОЛЬКО ОДИН правильный вариант!</p>
     </div>
+</div>
     <button type="submit" class="btn btn-primary">Загрузить</button>
 </form>
 
