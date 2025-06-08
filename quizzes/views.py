@@ -7,22 +7,27 @@ from django.views.generic import ListView, View
 from django.contrib.auth.forms import UserCreationForm
 from django.db.models import Q
 import json
-import csv
-from io import TextIOWrapper
+
 
 from .models import *
 from .forms import AnswerForm
+from quizzes.services.csv_importer import CSVTestImporter
 
 
 class AllTestsView(ListView):
     """
-    Вью домешней страницы со всеми тестами.
+    Вью для отображения всех тестов с пагинацией.
     """
     template_name = 'quizzes/tests.html'
     context_object_name = 'tests'
+    paginate_by = 10
+    model = Test
 
     def get_queryset(self):
-        return Test.objects.all()
+        """
+        Возвращает queryset всех тестов, отсортированных по названию.
+        """
+        return Test.objects.all().order_by('title')
 
 
 @login_required(login_url='quizzes:login')
@@ -137,8 +142,9 @@ def search_tests(request):
     return render(request, 'quizzes/search_results.html', context)
 
 
-class UploadCSVView(View):
+class UploadCSVView(LoginRequiredMixin, View):
     template_name = 'quizzes/upload_csv.html'
+    login_url = 'quizzes:login'
 
     def get(self, request):
         return render(request, self.template_name)
@@ -148,39 +154,31 @@ class UploadCSVView(View):
             messages.error(request, "Файл не выбран")
             return redirect('quizzes:home')
         try:
-            file = TextIOWrapper(request.FILES['csv_file'].file, encoding='utf-8-sig')
-            created_tests = self.process_csv(file)
-            messages.success(request, f"Успешно создано {created_tests} тестов!")
+            update_existing = request.POST.get('update_existing') == 'on'
+            importer = CSVTestImporter(update_existing=update_existing)
+            stats = importer.process_csv(request.FILES['csv_file'])
+            if update_existing:
+                message = (
+                    f"Результат импорта:<br>"
+                    f"- Создано тестов: {stats['tests_created']}<br>"
+                    f"- Обновлено тестов: {stats['tests_updated']}<br>"
+                    f"- Добавлено вопросов: {stats['questions_created']}<br>"
+                    f"- Переиспользовано вопросов: {stats['questions_reused']}<br>"
+                    f"- Удалено старых вопросов: {stats['questions_removed']}<br>"
+                    f"- Объединено дубликатов: {stats['duplicates_resolved']}"
+                )
+            else:
+                message = (
+                    f"Результат импорта:<br>"
+                    f"- Создано тестов: {stats['tests_created']}<br>"
+                    f"- Добавлено вопросов: {stats['questions_created']}<br>"
+                    f"- Переиспользовано вопросов: {stats['questions_reused']}"
+                )
+
+            messages.success(request, message)
         except Exception as e:
             messages.error(request, f"Ошибка: {str(e)}")
-        return redirect('quizzes:home')
-
-    def process_csv(self, file):
-        reader = csv.DictReader(file, delimiter=';')
-        created_count = 0
-        for row in reader:
-            # Обрабатываем тест (создаем или получаем существующий)
-            test, created = Test.objects.get_or_create(
-                title=row['test_title'].strip(),
-                defaults={'description': row.get('test_description', '').strip()}
-            )
-            if created:
-                created_count += 1
-            # Обрабатываем вопрос
-            question = Question.objects.create(
-                text=row['question_text'].strip(),
-                question_type=row['question_type'].strip(),
-                choices=[c.strip() for c in row['choices'].split('|')],
-                correct_answers=[c.strip() for c in row['correct_answers'].split('|')]
-            )
-            # Связываем вопрос с тестом
-            TestQuestion.objects.create(
-                test=test,
-                question=question,
-                order=int(row.get('question_order', 0))
-            )
-
-        return created_count
+        return render(request, self.template_name)
 
 
 def register(request):

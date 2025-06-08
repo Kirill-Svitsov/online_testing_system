@@ -40,6 +40,11 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         {% if user.is_authenticated %}
+                        <!-- Ссылка на админку для суперпользователей -->
+                        {% if user.is_superuser %}
+                        <li><a class="dropdown-item" href="{% url 'admin:index' %}" target="_blank">Админка</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        {% endif %}
                         <li><a class="dropdown-item" href="{% url 'quizzes:logout' %}">Выйти</a></li>
                         {% else %}
                         <li><a class="dropdown-item" href="{% url 'quizzes:login' %}">Войти</a></li>
